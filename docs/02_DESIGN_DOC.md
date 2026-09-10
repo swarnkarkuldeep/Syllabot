@@ -99,7 +99,7 @@ Two templates:
     the retrieved context (not just plausible-sounding).
   - *Latency*: p50/p95 response time.
 - **Output:** a CSV + a summary report (markdown/HTML) with aggregate scores — this becomes the
-  evidence behind the "500+ test queries" resume line and a good README/portfolio artifact.
+  evidence behind the "500+ test queries" claim and a good README/portfolio artifact.
 
 ## 7. Data Model (MySQL)
 

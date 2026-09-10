@@ -2,8 +2,8 @@
 ## AI Teaching Assistant — RAG-Based Doubt Resolution
 
 **Version:** 1.0
-**Owner:** You
-**Status:** Draft for build
+**Owner:** Kuldeep Swarnkar
+**Status:** V1 Completed
 
 ---
 
@@ -59,7 +59,7 @@ available 24/7, with measurable accuracy and hallucination rate — at **zero in
 - Fine-tuning a model (we only do prompt engineering + RAG).
 - Mobile app.
 
-### Explicitly deferred to V2 (nice-to-have, mention as "future work" in resume/interview)
+### Explicitly deferred to V2 (nice-to-have, future work)
 - Multi-course support, admin dashboard for content upload, auth, analytics dashboard for TAs.
 
 ## 6. Functional Requirements
