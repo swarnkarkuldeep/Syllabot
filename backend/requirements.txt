@@ -1,0 +1,29 @@
+# Core RAG
+langchain>=0.3.0
+langchain-community>=0.3.0
+langchain-huggingface>=0.1.0
+langchain-ollama>=0.2.0
+langchain-groq>=0.2.0
+langchain-google-genai>=2.0.0
+faiss-cpu>=1.8.0
+sentence-transformers>=3.0.0
+
+# Loaders
+pypdf>=4.0.0
+python-pptx>=1.0.0
+
+# Backend (Phase 3)
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.0.0
+sqlalchemy>=2.0.0
+pymysql>=1.1.0
+cryptography>=43.0.0
+python-multipart>=0.0.9
+
+# LLM providers
+ollama>=0.3.0
+groq>=0.11.0
+
+# Utilities
+python-dotenv>=1.0.0

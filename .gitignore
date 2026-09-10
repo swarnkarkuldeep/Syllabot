@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Environment & secrets
+.env
+
+# Vector store (large, rebuilt by ingest.py)
+backend/vectorstore/
+
+# Frontend
+node_modules/
+dist/
+
+# Logs & OS
+*.log
+.DS_Store
+Thumbs.db
+
+04_CLAUDE_CODE_PROMPT.md
+.remember/
+.claude/
+tmp/
+sample_curriculum/
+uploads/
