@@ -1,35 +1,26 @@
-const EXAMPLES = [
-  "Explain the difference between TCP and UDP",
-  "How does a hash table handle collisions?",
-  "Walk me through Big O notation for common sorts",
-];
+import { motion, useReducedMotion } from "motion/react";
+import { GraduationCapIcon } from "@phosphor-icons/react";
 
-export default function Greeting({ onPick }) {
+export default function Greeting() {
+  const reduce = useReducedMotion();
+
   return (
-    <section className="greeting">
-      <p className="greeting__eyebrow">Study companion</p>
+    <motion.section
+      className="greeting"
+      initial={reduce ? false : { opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+    >
+      <div className="greeting__mark" aria-hidden>
+        <GraduationCapIcon size={34} weight="duotone" />
+      </div>
       <h1 className="greeting__title">
         Ask anything from your course.
       </h1>
       <p className="greeting__lede">
-        Every answer is drawn directly from your materials
-        with source citations you can verify.
+        Every answer is drawn directly from your materials with source citations
+        you can verify.
       </p>
-      <div className="greeting__chips">
-        {EXAMPLES.map((q) => (
-          <button
-            type="button"
-            key={q}
-            className="greeting__chip"
-            onClick={() => onPick(q)}
-          >
-            <span className="greeting__chip-label">
-              <span className="greeting__chip-arrow" aria-hidden>→</span>
-              {q}
-            </span>
-          </button>
-        ))}
-      </div>
-    </section>
+    </motion.section>
   );
 }

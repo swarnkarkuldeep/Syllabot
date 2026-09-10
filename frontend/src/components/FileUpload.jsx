@@ -1,5 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  FileTextIcon,
+  NoteIcon,
+  FileDocIcon,
+  TableIcon,
+  FileCodeIcon,
+  GlobeIcon,
+  UploadSimpleIcon,
+  XIcon,
+  FolderOpenIcon,
+  TrashIcon,
+} from "@phosphor-icons/react";
+import {
   listSessionFiles,
   deleteSession,
   uploadFile,
@@ -10,14 +22,18 @@ import {
 const ACCEPT = ".pdf,.txt,.md,.docx,.csv,.json,.html";
 
 const FILE_ICONS = {
-  ".pdf": "📄",
-  ".txt": "📝",
-  ".md": "📝",
-  ".docx": "📘",
-  ".csv": "📊",
-  ".json": "📋",
-  ".html": "🌐",
+  ".pdf": FileTextIcon,
+  ".txt": NoteIcon,
+  ".md": NoteIcon,
+  ".docx": FileDocIcon,
+  ".csv": TableIcon,
+  ".json": FileCodeIcon,
+  ".html": GlobeIcon,
 };
+
+function getFileIcon(ext) {
+  return FILE_ICONS[ext] || FileTextIcon;
+}
 
 function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -26,7 +42,7 @@ function formatSize(bytes) {
 }
 
 /**
- * Document panel — upload, list, view, and manage course files.
+ * Document panel - upload, list, view, and manage course files.
  * Shown in the left panel of the split layout.
  */
 export default function FileUpload({ sessionId, onFilesChanged }) {
@@ -104,12 +120,11 @@ export default function FileUpload({ sessionId, onFilesChanged }) {
   };
 
   const handleDeleteFile = async (e, filename) => {
-    e.stopPropagation(); // Don't trigger view
+    e.stopPropagation();
     setError(null);
     setBusy(true);
     try {
       await deleteSessionFile(sessionId, filename);
-      // If we were viewing this file, go back
       if (viewing?.filename === filename) {
         setViewing(null);
       }
@@ -141,6 +156,7 @@ export default function FileUpload({ sessionId, onFilesChanged }) {
 
   // ── Document viewer ──────────────────────────────────────────────────
   if (viewing) {
+    const ViewIcon = getFileIcon(viewing.extension);
     return (
       <div className="doc-viewer">
         <div className="doc-viewer__header">
@@ -149,10 +165,11 @@ export default function FileUpload({ sessionId, onFilesChanged }) {
             className="doc-viewer__back"
             onClick={() => setViewing(null)}
           >
-            ← Back to files
+            <XIcon size={14} weight="bold" />
+            Close
           </button>
           <span className="doc-viewer__filename">
-            {FILE_ICONS[viewing.extension] || "📄"} {viewing.filename}
+            <ViewIcon size={14} weight="fill" aria-hidden /> {viewing.filename}
           </span>
         </div>
         {viewError ? (
@@ -185,10 +202,10 @@ export default function FileUpload({ sessionId, onFilesChanged }) {
         aria-label="Upload a file"
       >
         <span className="upload-zone__icon" aria-hidden>
-          {busy ? "⏳" : "📎"}
+          <UploadSimpleIcon size={22} weight="bold" />
         </span>
         <p className="upload-zone__text">
-          {busy ? "Indexing file…" : "Drop a file here or click to browse"}
+          {busy ? "Indexing file..." : "Drop a file here or click to browse"}
         </p>
         <p className="upload-zone__hint">
           PDF, Word, text, markdown, CSV, JSON, HTML
@@ -214,63 +231,57 @@ export default function FileUpload({ sessionId, onFilesChanged }) {
       {files.length > 0 ? (
         <>
           <ul className="file-list">
-            {files.map((f, i) => (
-              <li
-                className="file-item file-item--clickable"
-                key={f.filename || i}
-                onClick={() => handleViewFile(f.filename)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleViewFile(f.filename);
-                  }
-                }}
-              >
-                <span className="file-item__icon" aria-hidden>
-                  {FILE_ICONS[f.extension] || "📄"}
-                </span>
-                <div className="file-item__info">
-                  <div className="file-item__name" title={f.filename}>
-                    {f.filename}
-                  </div>
-                  <div className="file-item__meta">
-                    {formatSize(f.size_bytes || 0)}
-                  </div>
-                </div>
-                <span className="file-item__status file-item__status--indexed">
-                  Indexed
-                </span>
-                <button
-                  type="button"
-                  className="file-item__remove"
-                  onClick={(e) => handleDeleteFile(e, f.filename)}
-                  disabled={busy}
-                  title={`Delete ${f.filename}`}
-                  aria-label={`Delete ${f.filename}`}
+            {files.map((f, i) => {
+              const ItemIcon = getFileIcon(f.extension);
+              return (
+                <li
+                  className="file-item file-item--clickable"
+                  key={f.filename || i}
+                  onClick={() => handleViewFile(f.filename)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleViewFile(f.filename);
+                    }
+                  }}
                 >
-                  ✕
-                </button>
-              </li>
-            ))}
+                  <span className="file-item__icon" aria-hidden>
+                    <ItemIcon size={16} weight="fill" />
+                  </span>
+                  <div className="file-item__info">
+                    <div className="file-item__name" title={f.filename}>
+                      {f.filename}
+                    </div>
+                    <div className="file-item__meta">
+                      {formatSize(f.size_bytes || 0)}
+                    </div>
+                  </div>
+                  <span className="file-item__status file-item__status--indexed">
+                    Indexed
+                  </span>
+                  <button
+                    type="button"
+                    className="file-item__remove"
+                    onClick={(e) => handleDeleteFile(e, f.filename)}
+                    disabled={busy}
+                    title={`Delete ${f.filename}`}
+                    aria-label={`Delete ${f.filename}`}
+                  >
+                    <TrashIcon size={13} weight="bold" />
+                  </button>
+                </li>
+              );
+            })}
           </ul>
           <button
             type="button"
-            className="upload-zone__hint"
-            style={{
-              marginTop: "0.75rem",
-              color: "var(--error)",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              fontSize: "0.72rem",
-              padding: 0,
-              fontStyle: "normal",
-            }}
+            className="clear-btn"
             onClick={handleClear}
             disabled={busy}
           >
+            <TrashIcon size={12} weight="bold" aria-hidden />
             Clear all uploads
           </button>
         </>
@@ -278,7 +289,7 @@ export default function FileUpload({ sessionId, onFilesChanged }) {
         !busy && (
           <div className="empty-state">
             <span className="empty-state__icon" aria-hidden>
-              📚
+              <FolderOpenIcon size={26} weight="duotone" />
             </span>
             <p className="empty-state__title">No documents yet</p>
             <p className="empty-state__text">

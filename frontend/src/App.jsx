@@ -1,4 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import {
+  PlusIcon,
+  FileIcon,
+  ChatsCircleIcon,
+  BookOpenTextIcon,
+} from "@phosphor-icons/react";
 import ChatMessage from "./components/ChatMessage";
 import ChatInput from "./components/ChatInput";
 import Greeting from "./components/Greeting";
@@ -8,7 +14,6 @@ import "./App.css";
 
 const SESSION_KEY = "syllabot_session_id";
 const PROVIDER_KEY = "syllabot_provider";
-const THEME_KEY = "syllabot_theme";
 
 function getSessionId() {
   let id = localStorage.getItem(SESSION_KEY);
@@ -29,10 +34,6 @@ function timeNow() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-function getStoredTheme() {
-  return localStorage.getItem(THEME_KEY) || "dark";
-}
-
 function getStoredProvider() {
   return localStorage.getItem(PROVIDER_KEY) || "";
 }
@@ -43,22 +44,20 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [provider, setProvider] = useState(getStoredProvider);
-  const [theme, setTheme] = useState(getStoredTheme);
-  const [leftOpen, setLeftOpen] = useState(false);
+  const [docsOpen, setDocsOpen] = useState(false);
   const endRef = useRef(null);
-
-  // Apply theme to <html>
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem(THEME_KEY, theme);
-  }, [theme]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, loading]);
 
-  const toggleTheme = () => {
-    setTheme((t) => (t === "dark" ? "light" : "dark"));
+  const handleProviderChange = (val) => {
+    setProvider(val);
+    if (val) {
+      localStorage.setItem(PROVIDER_KEY, val);
+    } else {
+      localStorage.removeItem(PROVIDER_KEY);
+    }
   };
 
   const handleNewChat = async () => {
@@ -100,7 +99,7 @@ export default function App() {
       const detail =
         err?.response?.data?.detail || err?.message || "Something went wrong.";
       setError(
-        `Unable to reach the assistant — ${detail}. Make sure the backend is running on :8000.`,
+        `Unable to reach the assistant - ${detail}. Make sure the backend is running on :8000.`,
       );
     } finally {
       setLoading(false);
@@ -131,96 +130,81 @@ export default function App() {
 
   return (
     <div className="app">
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <header className="header">
-        <div className="header__brand">
-          <span className="header__icon" aria-hidden>📖</span>
-          <span className="header__name">Syllabot</span>
-          <span className="header__subtitle">AI Study Companion</span>
+      {/* Ambient background blobs */}
+      <div className="app__bg" aria-hidden>
+        <div className="app__blob app__blob--1" />
+        <div className="app__blob app__blob--2" />
+        <div className="app__blob app__blob--3" />
+      </div>
+
+      {/* ── Floating Navbar ─────────────────────────────────────────────── */}
+      <nav className="navbar">
+        <div className="navbar__brand">
+          <span className="navbar__mark" aria-hidden>
+            <BookOpenTextIcon size={18} weight="fill" />
+          </span>
+          <div>
+            <span className="navbar__name">Syllabot</span>
+            <span className="navbar__suffix">AI Study Companion</span>
+          </div>
         </div>
 
-        <div className="header__actions">
-          <select
-            className="provider-select"
-            value={provider}
-            onChange={(e) => {
-              const val = e.target.value;
-              setProvider(val);
-              if (val) {
-                localStorage.setItem(PROVIDER_KEY, val);
-              } else {
-                localStorage.removeItem(PROVIDER_KEY);
-              }
-            }}
-            title="Choose LLM provider"
-            aria-label="LLM provider"
-          >
-            <option value="">Default</option>
-            <option value="gemini">Gemini</option>
-            <option value="groq">Groq</option>
-            <option value="ollama">Ollama</option>
-          </select>
-
-          <button
-            type="button"
-            className="theme-toggle"
-            onClick={toggleTheme}
-            title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-          >
-            {theme === "dark" ? "☀️" : "🌙"}
-            <span>{theme === "dark" ? "Light" : "Dark"}</span>
-          </button>
-
+        <div className="navbar__actions">
           {hasMessages && (
             <button
               type="button"
-              className="theme-toggle"
+              className="btn"
               onClick={handleNewChat}
               title="Start a fresh conversation"
             >
+              <PlusIcon size={14} weight="bold" />
               New chat
             </button>
           )}
         </div>
-      </header>
+      </nav>
 
-      {/* ── Split Layout ──────────────────────────────────────────────── */}
-      <div className="split">
-        {/* Left Panel: Documents */}
-        <aside className={`panel-left${leftOpen ? " is-open" : ""}`}>
-          <div className="panel-left__header">
-            <span className="panel-left__title">Documents</span>
+      {/* ── Workspace ──────────────────────────────────────────────────── */}
+      <div className="workspace">
+        {/* Documents panel */}
+        <aside className={`docs${docsOpen ? " is-open" : ""}`}>
+          <div className="docs__head">
+            <span className="docs__title">
+              <FileIcon size={15} weight="fill" />
+              Documents
+            </span>
           </div>
-          <div className="panel-left__body">
+          <div className="docs__body">
             <FileUpload sessionId={sessionId} />
           </div>
-          <div className="panel-left__status">
+          <div className="docs__status">
             <span className="status-dot status-dot--ok" aria-hidden />
-            <span>Session: {sessionId.slice(0, 12)}…</span>
+            <span>Session: {sessionId.slice(0, 12)}...</span>
           </div>
         </aside>
 
-        {/* Right Panel: Chat */}
-        <section className="panel-right">
+        {/* Chat pane */}
+        <section className="chatpane">
           <main className="chat">
-            {!hasMessages && <Greeting onPick={handleSend} />}
+            <div className="thread">
+              {!hasMessages && <Greeting />}
 
-            <div className="chat__thread">
               {messages.map((msg, i) => (
                 <ChatMessage key={i} message={msg} onFeedback={handleFeedback} />
               ))}
 
               {loading && (
                 <div className="msg msg--ta">
-                  <div className="msg__card-outer">
-                    <div className="msg__card msg__card--pending">
-                      <span className="thinking" aria-label="Thinking">
-                        <span className="thinking__dot" />
-                        <span className="thinking__dot" />
-                        <span className="thinking__dot" />
-                      </span>
-                      Searching your materials…
+                  <div className="msg__avatar" aria-hidden>
+                    <span className="thinking" aria-label="Thinking">
+                      <span className="thinking__dot" />
+                      <span className="thinking__dot" />
+                      <span className="thinking__dot" />
+                    </span>
+                  </div>
+                  <div className="msg__card">
+                    <div className="msg__card--pending">
+                      Searching your materials...
                     </div>
                   </div>
                 </div>
@@ -231,23 +215,28 @@ export default function App() {
             </div>
           </main>
 
-          <footer className="inputarea">
-            <ChatInput onSend={handleSend} loading={loading} />
-            <p className="inputarea__hint">
-              Answers grounded in your course materials · Sources included with every reply
+          <footer className="composer-wrap">
+            <ChatInput
+              onSend={handleSend}
+              loading={loading}
+              provider={provider}
+              onProviderChange={handleProviderChange}
+            />
+            <p className="composer__hint">
+              Answers grounded in your course materials
             </p>
           </footer>
         </section>
       </div>
 
-      {/* Mobile toggle for left panel */}
+      {/* FAB - mobile documents toggle */}
       <button
         type="button"
-        className="mobile-toggle"
-        onClick={() => setLeftOpen((o) => !o)}
-        aria-label={leftOpen ? "Show chat" : "Show documents"}
+        className="fab"
+        onClick={() => setDocsOpen((o) => !o)}
+        aria-label={docsOpen ? "Show chat" : "Show documents"}
       >
-        {leftOpen ? "💬" : "📄"}
+        {docsOpen ? <ChatsCircleIcon size={22} weight="fill" /> : <FileIcon size={22} weight="fill" />}
       </button>
     </div>
   );
