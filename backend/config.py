@@ -100,8 +100,8 @@ RETRIEVAL_TOP_K: int = _int("RETRIEVAL_TOP_K", "5")
 # Minimum cosine similarity for a chunk to be considered relevant. Higher value
 # = stricter (fewer hallucinations but more "I don't know" answers). Measured
 # against real queries in Phase 2: relevant content scores ~0.26-0.67, off-topic
-# scores below 0.
-SIMILARITY_THRESHOLD: float = _float("SIMILARITY_THRESHOLD", "0.20")
+# scores below 0. Lowered for small session indexes.
+SIMILARITY_THRESHOLD: float = _float("SIMILARITY_THRESHOLD", "0.05")
 
 # ── MySQL ────────────────────────────────────────────────────────────────────
 

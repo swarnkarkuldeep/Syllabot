@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from pathlib import Path
 
 from langchain_community.document_loaders import (
@@ -12,6 +13,45 @@ from langchain_community.document_loaders import (
 from langchain_core.documents import Document
 
 log = logging.getLogger(__name__)
+
+
+def _normalize_text(text: str) -> str:
+    """Clean whitespace artifacts from PDF / docx text extraction.
+
+    PyPDFLoader and similar extractors often preserve the PDF's internal line
+    breaks, which fragment words and sentences across lines.  This produces
+    poor-quality embeddings because the tokenizer sees broken tokens.
+
+    The normalisation pipeline:
+      1. Strip trailing whitespace from each line (trailing spaces in PDFs).
+      2. Merge continuation lines: a line that does NOT end with sentence-
+         punctuation followed by a newline is joined with the next line.
+      3. Collapse remaining whitespace runs into a single space.
+      4. Collapse 3+ consecutive newlines down to two (paragraph break).
+    """
+    if not text:
+        return text
+
+    # 1. Strip trailing whitespace per line
+    lines = [ln.rstrip() for ln in text.split("\n")]
+
+    # 2. Merge continuation lines — lines not ending with sentence punctuation
+    #    are joined with the following line (handles wrapped text).
+    merged: list[str] = []
+    for line in lines:
+        if merged and not merged[-1].endswith((".", "!", "?", ":", ";", "]", "）")):
+            merged[-1] += " " + line
+        else:
+            merged.append(line)
+
+    # 3. Collapse whitespace runs into a single space
+    text = " ".join(merged)
+    text = re.sub(r"[^\S\n]+", " ", text)
+
+    # 4. Collapse 3+ newlines into paragraph breaks
+    text = re.sub(r"\n{3,}", "\n\n", text)
+
+    return text.strip()
 
 
 def load_documents(source_dir: Path) -> list[Document]:
@@ -57,6 +97,9 @@ def load_documents(source_dir: Path) -> list[Document]:
             for doc in docs:
                 doc.metadata.setdefault("source_file", filepath.name)
                 doc.metadata.setdefault("source_path", str(filepath))
+                # Normalize whitespace so embeddings are not corrupted by
+                # PDF line-break artifacts (excessive newlines/spaces).
+                doc.page_content = _normalize_text(doc.page_content)
 
             documents.extend(docs)
         except Exception:

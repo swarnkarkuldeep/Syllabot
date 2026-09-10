@@ -84,7 +84,8 @@ available 24/7, with measurable accuracy and hallucination rate — at **zero in
 
 - **Cost:** must run entirely on free tiers / local compute. No paid API keys required by default.
 - **Reproducibility:** entire pipeline runnable with one setup script + `.env.example`.
-- **Portability:** swappable LLM provider (local Ollama ↔ Groq free tier) via a config flag.
+- **Portability:** swappable LLM provider (Gemini = primary, Groq = fallback, local Ollama = offline)
+  via a config flag.
 - **Groundedness:** system prompt must instruct the model to answer only from provided context and
   say "I don't know" otherwise — this is the core anti-hallucination guardrail.
 

@@ -13,6 +13,9 @@ import logging
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
+
+# Force INFO logging so retrieval diagnostics are visible
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 from typing import Optional
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
@@ -123,12 +126,57 @@ class CleanupResponse(BaseModel):
     message: str
 
 
+class FileDeleteResponse(BaseModel):
+    filename: str
+    message: str
+
+
+class FileContentResponse(BaseModel):
+    filename: str
+    content: str
+    extension: str
+
+
 # ── Endpoints ────────────────────────────────────────────────────────────────
 
 @app.get("/health", response_model=HealthResponse, tags=["health"])
 def health_check():
     """Lightweight health check — confirms the API is up."""
     return HealthResponse(provider=config.LLM_PROVIDER)
+
+
+@app.get("/debug/retrieval/{session_id}", tags=["debug"])
+def debug_retrieval(session_id: str, q: str = "test"):
+    """Diagnostic endpoint: shows retrieval scores for a session index."""
+    from rag_chain import _distance_to_cosine, retrieve_with_threshold
+    from session_uploads import get_session_index_dir
+
+    session_index = get_session_index_dir(session_id)
+    index_path = session_index if session_index.exists() else None
+
+    if index_path is None:
+        return {"error": f"No index at {session_index}", "session_id": session_id}
+
+    try:
+        docs, scores, passed = retrieve_with_threshold(q, index_path=index_path)
+    except Exception as exc:
+        return {"error": str(exc), "session_id": session_id}
+
+    return {
+        "session_id": session_id,
+        "index_path": str(index_path),
+        "query": q,
+        "threshold": config.SIMILARITY_THRESHOLD,
+        "passed": passed,
+        "chunks": [
+            {
+                "score": round(s, 4),
+                "source": d.metadata.get("source_file", "?"),
+                "preview": d.page_content[:120],
+            }
+            for d, s in zip(docs, scores)
+        ],
+    }
 
 
 @app.post("/chat", response_model=ChatResponse, tags=["chat"])
@@ -266,6 +314,36 @@ def list_session_files(session_id: str):
     """List uploaded files for a session."""
     files = session_uploads.list_session_files(session_id)
     return SessionFilesResponse(session_id=session_id, files=files)
+
+
+@app.delete("/session/{session_id}/files/{filename}", response_model=FileDeleteResponse, tags=["upload"])
+def delete_session_file(session_id: str, filename: str):
+    """Delete a single uploaded file and rebuild the session index."""
+    deleted = session_uploads.delete_session_file(session_id, filename)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"File '{filename}' not found.")
+
+    log.info("File deleted: session=%s file=%s", session_id, filename)
+    return FileDeleteResponse(
+        filename=filename,
+        message=f"Deleted {filename}. Index rebuilt.",
+    )
+
+
+@app.get("/session/{session_id}/files/{filename}/content", response_model=FileContentResponse, tags=["upload"])
+def read_session_file(session_id: str, filename: str):
+    """Read an uploaded file's content for viewing in the UI."""
+    try:
+        content = session_uploads.read_session_file(session_id, filename)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"File '{filename}' not found.")
+
+    ext = Path(filename).suffix.lower()
+    return FileContentResponse(
+        filename=filename,
+        content=content,
+        extension=ext,
+    )
 
 
 @app.delete("/session/{session_id}", response_model=CleanupResponse, tags=["upload"])

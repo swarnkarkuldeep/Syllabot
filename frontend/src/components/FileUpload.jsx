@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { listSessionFiles, deleteSession, uploadFile } from "../api";
+import {
+  listSessionFiles,
+  deleteSession,
+  uploadFile,
+  deleteSessionFile,
+  readSessionFile,
+} from "../api";
 
 const ACCEPT = ".pdf,.txt,.md,.docx,.csv,.json,.html";
 
@@ -20,7 +26,7 @@ function formatSize(bytes) {
 }
 
 /**
- * Document panel — upload, list, and manage course files.
+ * Document panel — upload, list, view, and manage course files.
  * Shown in the left panel of the split layout.
  */
 export default function FileUpload({ sessionId, onFilesChanged }) {
@@ -28,6 +34,9 @@ export default function FileUpload({ sessionId, onFilesChanged }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+  const [viewing, setViewing] = useState(null); // { filename, content, extension }
+  const [viewLoading, setViewLoading] = useState(false);
+  const [viewError, setViewError] = useState(null);
   const inputRef = useRef(null);
 
   const refresh = useCallback(async () => {
@@ -85,6 +94,7 @@ export default function FileUpload({ sessionId, onFilesChanged }) {
     try {
       await deleteSession(sessionId);
       setFiles([]);
+      setViewing(null);
       onFilesChanged?.();
     } catch (err) {
       setError(err?.response?.data?.detail || err?.message || "Clear failed.");
@@ -93,6 +103,68 @@ export default function FileUpload({ sessionId, onFilesChanged }) {
     }
   };
 
+  const handleDeleteFile = async (e, filename) => {
+    e.stopPropagation(); // Don't trigger view
+    setError(null);
+    setBusy(true);
+    try {
+      await deleteSessionFile(sessionId, filename);
+      // If we were viewing this file, go back
+      if (viewing?.filename === filename) {
+        setViewing(null);
+      }
+      await refresh();
+      onFilesChanged?.();
+    } catch (err) {
+      setError(
+        err?.response?.data?.detail || err?.message || "Delete failed."
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleViewFile = async (filename) => {
+    setViewError(null);
+    setViewLoading(true);
+    try {
+      const data = await readSessionFile(sessionId, filename);
+      setViewing(data);
+    } catch (err) {
+      setViewError(
+        err?.response?.data?.detail || err?.message || "Could not load file."
+      );
+    } finally {
+      setViewLoading(false);
+    }
+  };
+
+  // ── Document viewer ──────────────────────────────────────────────────
+  if (viewing) {
+    return (
+      <div className="doc-viewer">
+        <div className="doc-viewer__header">
+          <button
+            type="button"
+            className="doc-viewer__back"
+            onClick={() => setViewing(null)}
+          >
+            ← Back to files
+          </button>
+          <span className="doc-viewer__filename">
+            {FILE_ICONS[viewing.extension] || "📄"} {viewing.filename}
+          </span>
+        </div>
+        {viewError ? (
+          <div className="doc-viewer__error">{viewError}</div>
+        ) : (
+          <pre className="doc-viewer__content">{viewing.content}</pre>
+        )}
+      </div>
+    );
+  }
+
+  // ── File list view ───────────────────────────────────────────────────
   return (
     <>
       {/* Upload zone */}
@@ -143,7 +215,19 @@ export default function FileUpload({ sessionId, onFilesChanged }) {
         <>
           <ul className="file-list">
             {files.map((f, i) => (
-              <li className="file-item" key={f.filename || i}>
+              <li
+                className="file-item file-item--clickable"
+                key={f.filename || i}
+                onClick={() => handleViewFile(f.filename)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleViewFile(f.filename);
+                  }
+                }}
+              >
                 <span className="file-item__icon" aria-hidden>
                   {FILE_ICONS[f.extension] || "📄"}
                 </span>
@@ -158,6 +242,16 @@ export default function FileUpload({ sessionId, onFilesChanged }) {
                 <span className="file-item__status file-item__status--indexed">
                   Indexed
                 </span>
+                <button
+                  type="button"
+                  className="file-item__remove"
+                  onClick={(e) => handleDeleteFile(e, f.filename)}
+                  disabled={busy}
+                  title={`Delete ${f.filename}`}
+                  aria-label={`Delete ${f.filename}`}
+                >
+                  ✕
+                </button>
               </li>
             ))}
           </ul>

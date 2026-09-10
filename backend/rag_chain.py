@@ -187,11 +187,12 @@ def condense_question(question: str, history: list[dict],
 def _distance_to_cosine(distance: float) -> float:
     """Convert a FAISS L2 distance into a cosine similarity.
 
-    Valid because our embeddings are L2-normalised (see embeddings.py). For two
-    unit vectors ``a`` and ``b``, the squared L2 distance is ``2*(1 - cos(a,b))``,
-    so ``cos = 1 - dist^2 / 2``. Higher cosine = more similar.
+    Valid because our embeddings are L2-normalised (see embeddings.py). FAISS
+    ``IndexFlatL2`` returns **squared** L2 distances.  For two unit vectors
+    ``a`` and ``b`` the squared L2 distance is ``2*(1 - cos(a,b))``, so
+    ``cos = 1 - dist / 2``.  Higher cosine = more similar.
     """
-    return 1.0 - (distance * distance) / 2.0
+    return 1.0 - distance / 2.0
 
 
 def retrieve_with_threshold(
@@ -217,6 +218,7 @@ def retrieve_with_threshold(
                     If None, uses the global index.
     """
     k = top_k if top_k is not None else config.RETRIEVAL_TOP_K
+    log.info("Retrieval: index_path=%s top_k=%d", index_path, k)
     vs = load_index(index_path)
     store_dir = index_path or config.VECTORSTORE_DIR
     if vs is None:
@@ -241,6 +243,12 @@ def retrieve_with_threshold(
         "Retrieved %d chunks, best cosine=%.4f, threshold=%.2f, passed=%s",
         len(docs), best_score, config.SIMILARITY_THRESHOLD, passed,
     )
+    for i, (doc, score) in enumerate(zip(docs, scores)):
+        log.info(
+            "  chunk[%d] score=%.4f source=%s preview=%.80s",
+            i, score, doc.metadata.get("source_file", "?"),
+            doc.page_content.strip()[:80],
+        )
     return docs, scores, passed
 
 
@@ -297,6 +305,7 @@ def rag_answer(
 
     # Step 1: Condense follow-up into standalone question
     condensed = condense_question(question, history, provider=provider)
+    log.info("RAG: original=%r condensed=%r", question, condensed)
 
     # Step 2: Retrieve chunks with similarity threshold check
     try:

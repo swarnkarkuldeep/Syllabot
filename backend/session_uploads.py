@@ -161,3 +161,95 @@ def list_session_files(session_id: str) -> list[dict]:
                 "extension": f.suffix.lower(),
             })
     return files
+
+
+def delete_session_file(session_id: str, filename: str) -> bool:
+    """Delete a single uploaded file and rebuild the session index.
+
+    Returns True if the file existed and was deleted, False otherwise.
+    """
+    session_dir = _session_dir(session_id)
+    file_path = session_dir / filename
+
+    if not file_path.exists() or not file_path.is_file():
+        return False
+
+    file_path.unlink()
+    log.info("Deleted file: session=%s file=%s", session_id, filename)
+
+    # Rebuild index so the deleted file's chunks are removed
+    remaining = [
+        f for f in session_dir.iterdir()
+        if f.is_file()
+        and f.suffix.lower() in config.ALLOWED_EXTENSIONS
+        and not f.name.startswith(".")
+    ]
+
+    index_dir = _session_index_dir(session_id)
+    if remaining:
+        try:
+            build_session_index(session_id)
+        except Exception as exc:
+            log.warning("Index rebuild after delete failed: %s", exc)
+    elif index_dir.exists():
+        shutil.rmtree(index_dir)
+        log.info("Removed empty index: session=%s", session_id)
+
+    return True
+
+
+# Max characters to return for document viewing (~50KB).
+_MAX_READ_CHARS = 50_000
+
+
+def read_session_file(session_id: str, filename: str) -> str:
+    """Read an uploaded file's content as text.
+
+    For text-based files (.txt, .md, .csv, .json, .html), reads raw UTF-8.
+    For PDF and DOCX, extracts text using the respective libraries.
+
+    Returns the text content (truncated to ~50KB).
+    Raises FileNotFoundError if the file doesn't exist.
+    """
+    session_dir = _session_dir(session_id)
+    file_path = session_dir / filename
+
+    if not file_path.exists() or not file_path.is_file():
+        raise FileNotFoundError(f"File not found: {filename}")
+
+    ext = file_path.suffix.lower()
+
+    # Text-based files — read directly
+    if ext in {".txt", ".md", ".csv", ".json", ".html"}:
+        text = file_path.read_text(encoding="utf-8", errors="replace")
+        return text[:_MAX_READ_CHARS]
+
+    # PDF — extract text with pypdf
+    if ext == ".pdf":
+        try:
+            from pypdf import PdfReader
+            reader = PdfReader(str(file_path))
+            pages = []
+            for page in reader.pages:
+                t = page.extract_text()
+                if t:
+                    pages.append(t)
+            text = "\n\n".join(pages)
+            return text[:_MAX_READ_CHARS]
+        except Exception as exc:
+            log.warning("PDF read failed for %s: %s", filename, exc)
+            return f"[Could not extract text from PDF: {exc}]"
+
+    # DOCX — extract text with python-docx
+    if ext == ".docx":
+        try:
+            from docx import Document
+            doc = Document(str(file_path))
+            text = "\n\n".join(p.text for p in doc.paragraphs if p.text.strip())
+            return text[:_MAX_READ_CHARS]
+        except Exception as exc:
+            log.warning("DOCX read failed for %s: %s", filename, exc)
+            return f"[Could not extract text from DOCX: {exc}]"
+
+    # Unsupported for text extraction
+    return f"[Preview not available for {ext} files]"

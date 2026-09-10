@@ -21,7 +21,6 @@ dist/
 .DS_Store
 Thumbs.db
 
-04_CLAUDE_CODE_PROMPT.md
 .remember/
 .claude/
 tmp/

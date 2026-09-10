@@ -415,6 +415,93 @@ button {
   background: var(--error-dim);
 }
 
+/* ── Clickable File Items ──────────────────────────────────────────────── */
+
+.file-item--clickable {
+  cursor: pointer;
+  transition: all 0.15s var(--ease);
+}
+.file-item--clickable:hover {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+/* ── Document Viewer ───────────────────────────────────────────────────── */
+
+.doc-viewer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.doc-viewer__header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.75rem;
+}
+
+.doc-viewer__back {
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  transition: all 0.15s var(--ease);
+  flex-shrink: 0;
+}
+.doc-viewer__back:hover {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.doc-viewer__filename {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doc-viewer__content {
+  flex: 1;
+  overflow-y: auto;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  line-height: 1.65;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.doc-viewer__content::-webkit-scrollbar {
+  width: 4px;
+}
+.doc-viewer__content::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.doc-viewer__error {
+  color: var(--error);
+  font-size: 0.85rem;
+  background: var(--error-dim);
+  border: 1px solid rgba(194, 84, 80, 0.2);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+}
+
 /* ── Empty State (left panel) ──────────────────────────────────────────── */
 
 .empty-state {

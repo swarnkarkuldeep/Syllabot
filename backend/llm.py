@@ -91,10 +91,16 @@ class TripleFallbackChatModel(BaseChatModel):
 # ── Provider factories ───────────────────────────────────────────────────────
 
 def _make_gemini() -> BaseChatModel:
-    from langchain_google_genai import ChatGoogleGenerativeAI
+    """Build a Gemini chat model using the modern google-genai SDK directly.
+
+    Uses a custom LangChain wrapper (gemini_chat.ChatGemini) that hits the
+    standard generativelanguage.googleapis.com endpoint and supports both
+    legacy "AIza" and new "AQ." API key formats.
+    """
+    from gemini_chat import ChatGemini
 
     log.info("Using Gemini: model=%s", config.GEMINI_MODEL)
-    return ChatGoogleGenerativeAI(
+    return ChatGemini(
         model=config.GEMINI_MODEL,
         google_api_key=config.GEMINI_API_KEY,
         temperature=0.1,

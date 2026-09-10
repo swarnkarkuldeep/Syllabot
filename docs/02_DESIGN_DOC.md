@@ -29,9 +29,9 @@ frontend, DB) exists to support this loop reliably and to let us *measure* wheth
                                                          │
                                                          ▼
                                                 ┌───────────────┐
-                                                │ Local LLM      │
-                                                │ (Ollama) or    │
-                                                │ Groq free tier │
+                                                │ LLM Provider   │
+                                                │ Gemini / Groq /│
+                                                │ Ollama         │
                                                 └───────────────┘
 ```
 
@@ -61,7 +61,7 @@ frontend, DB) exists to support this loop reliably and to let us *measure* wheth
    This is the primary anti-hallucination guardrail.
 6. **Construct prompt** using a strict template (see §5) that includes only retrieved chunks as
    context, plus the conversation history and the question.
-7. **Generate** answer via the configured LLM (Ollama local model, or Groq free-tier model).
+7. **Generate** answer via the configured LLM (Gemini free tier, or Groq, or local Ollama).
 8. **Post-process**: attach source citations (file + section) from the chunks actually used.
 9. **Log** the full turn (query, condensed query, retrieved chunk ids, answer, latency) to MySQL.
 10. Return `{answer, sources, confidence}` to the frontend.

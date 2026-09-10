@@ -53,4 +53,18 @@ export async function deleteSession(sessionId) {
   return data;
 }
 
+/** Delete a single uploaded file from a session.
+ *  @returns {Promise<{filename, message}>} */
+export async function deleteSessionFile(sessionId, filename) {
+  const { data } = await client.delete(`/session/${sessionId}/files/${encodeURIComponent(filename)}`);
+  return data;
+}
+
+/** Read an uploaded file's content for viewing.
+ *  @returns {Promise<{filename, content, extension}>} */
+export async function readSessionFile(sessionId, filename) {
+  const { data } = await client.get(`/session/${sessionId}/files/${encodeURIComponent(filename)}/content`);
+  return data;
+}
+
 export default client;

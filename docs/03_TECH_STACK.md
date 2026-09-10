@@ -6,8 +6,9 @@ required for the core build.
 
 | Layer | Choice | Why | Cost |
 |---|---|---|---|
-| **LLM (generation)** | **Ollama** running `llama3.1:8b` or `mistral:7b` locally | Fully free, unlimited, no API key, runs on a laptop CPU/GPU. Primary/default. | $0 |
-| **LLM (optional, faster demo)** | **Groq API** (`llama-3.1-8b-instant` or similar) | Free tier with generous rate limits, very fast inference, no local compute needed for demos. Swappable via config flag. | $0 (free tier) |
+| **LLM (generation, primary)** | **Gemini 2.5 Flash** via the modern `google-genai` SDK | Free tier, fast, high-quality, supports both legacy `AIza` and new `AQ.` API keys. Primary/default provider. | $0 (free tier) |
+| **LLM (fallback)** | **Groq API** (`qwen/qwen3.8-27b` or similar) | Free tier with generous rate limits, very fast inference. Used as fallback if Gemini is unreachable. | $0 (free tier) |
+| **LLM (offline, last resort)** | **Ollama** running `llama3.2:3b` locally | Fully free, unlimited, no API key, runs on a laptop CPU/GPU. Keeps the stack functional fully offline. | $0 |
 | **Embeddings** | `sentence-transformers/all-MiniLM-L6-v2` (HuggingFace, local) | Free, fast on CPU, no API cost, well-proven for RAG. | $0 |
 | **Orchestration** | **LangChain** (Python) | Handles loaders, text splitting, retriever chains, memory, condense-question pattern out of the box — matches resume line. | $0 |
 | **Vector store** | **FAISS** (local, `faiss-cpu`) | Free, no hosted vector DB needed, fast enough for a single-curriculum dataset, persists to disk. | $0 |
@@ -22,9 +23,10 @@ required for the core build.
 
 ## Key free-tier decisions and trade-offs
 
-- **Ollama vs. hosted API:** Ollama needs the dev machine to download a model (~4–8GB) and have
-  enough RAM (8GB+ recommended for 7–8B models, quantized). If your machine can't run it well,
-  Groq's free tier is the fallback — still $0, just needs internet + an API key (free signup).
+- **Gemini vs. Groq vs. Ollama:** Gemini free tier is the primary provider — fast, high-quality,
+  and the `google-genai` SDK supports the new `AQ.` key format. Groq is the automatic fallback if
+  Gemini is unreachable (still $0, needs a free API key). Ollama is the offline last resort —
+  needs the model downloaded (~2–4GB for `llama3.2:3b`) and enough RAM to run it locally.
 - **FAISS vs. Pinecone/Weaviate/Chroma Cloud:** FAISS avoids any hosted vector DB account/limits
   entirely, since the corpus (one curriculum) is small enough to fit in memory/disk easily.
 - **MySQL vs. SQLite:** SQLite is zero-setup and totally free but doesn't literally match "MySQL"
@@ -38,6 +40,9 @@ required for the core build.
 langchain
 langchain-community
 langchain-huggingface
+langchain-ollama
+langchain-groq
+google-genai      # modern Gemini SDK (AQ. key support)
 faiss-cpu
 sentence-transformers
 fastapi
@@ -50,7 +55,6 @@ ollama            # python client for local Ollama server
 groq              # optional, only if using Groq fallback
 pypdf
 python-pptx
-unstructured
 ```
 
 ## Frontend (core)
@@ -64,8 +68,9 @@ react-markdown   # to render answer text + citations nicely
 
 ## Local setup prerequisites
 
-1. Install [Ollama](https://ollama.com) → `ollama pull llama3.1:8b` (or a smaller model like
-   `phi3:mini` if RAM-constrained).
-2. Install MySQL locally (or via Docker: `docker run -e MYSQL_ROOT_PASSWORD=pass -p 3306:3306 mysql`).
-3. Python 3.11+, Node 18+.
-4. Optional: free Groq API key from console.groq.com for the fast/fallback provider.
+1. Optional: [Google AI Studio](https://aistudio.google.com) API key for the Gemini provider
+   (supports both `AIza` and `AQ.` key formats).
+2. Optional: [Groq](https://console.groq.com) API key for the fallback provider.
+3. Optional: [Ollama](https://ollama.com) → `ollama pull llama3.2:3b` for fully offline use.
+4. Install MySQL locally (or via Docker: `docker run -e MYSQL_ROOT_PASSWORD=pass -p 3306:3306 mysql`).
+5. Python 3.11+, Node 18+.
