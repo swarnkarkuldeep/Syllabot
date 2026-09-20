@@ -107,6 +107,8 @@ Thumbs up/down on every answer, stored for evaluation and continuous improvement
 - _(Optional)_ [Groq API key](https://console.groq.com) — free tier
 - _(Optional)_ [Google AI Studio API key](https://aistudio.google.com) — free tier
 
+For the containerized setup, only Docker Desktop is required.
+
 ### 1. Clone & Install
 
 ```bash
@@ -165,7 +167,29 @@ DATABASE_URL=sqlite:///./syllabot.db
 # Or for MySQL: mysql+pymysql://root:changeme@localhost:3306/ai_teaching_assistant
 ```
 
-### 3. Run
+### 3. Run with Docker
+
+The complete application stack (MySQL, FastAPI, and the production React/Nginx
+frontend) runs with:
+
+```bash
+docker compose up --build
+```
+
+Open **[localhost:5173](http://localhost:5173)**. The API is also available at
+[localhost:8000/docs](http://localhost:8000/docs).
+
+The Compose setup persists MySQL data in a named volume and keeps the FAISS
+index, curriculum, and session uploads in the backend directories. Configure
+LLM keys in `backend/.env` before starting the stack.
+
+To stop the stack while keeping data:
+
+```bash
+docker compose down
+```
+
+### 4. Run locally without Docker
 
 ```bash
 # Terminal 1 — Backend
