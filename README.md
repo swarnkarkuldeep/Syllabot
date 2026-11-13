@@ -176,7 +176,7 @@ frontend) runs with:
 docker compose up --build
 ```
 
-Open **[localhost:5173](http://localhost:5173)**. The API is also available at
+Open **[localhost:3000](http://localhost:3000)**. The API is also available at
 [localhost:8000/docs](http://localhost:8000/docs).
 
 The Compose setup persists MySQL data in a named volume and keeps the FAISS
@@ -201,7 +201,7 @@ cd frontend
 npm run dev
 ```
 
-Open **[localhost:5173](http://localhost:5173)** — you're live!
+Open **[localhost:3000](http://localhost:3000)** — you're live!
 
 <details>
 <summary><b>Optional: MySQL via Docker</b></summary>
