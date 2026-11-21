@@ -42,7 +42,11 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      # First boot loads torch + the embedding model and can take 1-2 min.
+      # Failures inside start_period don't count; it still turns healthy as
+      # soon as /health answers.
+      start_period: 180s
+      start_interval: 5s
 
   frontend:
     build:
