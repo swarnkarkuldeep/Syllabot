@@ -1,0 +1,93 @@
+/* App shell: one rounded sheet of paper on the mint backdrop, split into
+   rail | center | session panel. */
+
+/* Padding (not margin) frames the sheet: a margin here would collapse
+   through #root and make the page scroll. */
+#root { padding: 20px; }
+
+.shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) 340px;
+  gap: 14px;
+  height: 100%;
+  padding: 14px;
+  background: var(--shell);
+  border-radius: var(--r-shell);
+  overflow: hidden;
+}
+
+/* ── Rail ─────────────────────────────────────────────────────────────── */
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 22px 0;
+  background: var(--sand);
+  border-radius: var(--r-panel);
+}
+
+.rail__brand {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  color: var(--ink);
+}
+
+.rail__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.rail__btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: var(--r-pill);
+  background: var(--white);
+  color: var(--ink);
+  transition: transform var(--t-fast) var(--ease-out), color var(--t-fast);
+}
+
+.rail__btn:hover:not(:disabled) { transform: translateY(-1px); }
+.rail__btn:active:not(:disabled) { transform: scale(0.94); }
+.rail__btn:disabled { color: #b9b1a9; }
+
+.rail__btn[aria-current="page"] { color: var(--white); }
+
+/* The ink disc is its own element so it can slide between buttons. */
+.rail__disc {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--ink);
+}
+
+.rail__icon { position: relative; display: grid; }
+
+.rail__spacer { flex: 1; }
+
+/* ── Columns ──────────────────────────────────────────────────────────── */
+
+.center {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--sand);
+  border-radius: var(--r-panel);
+  overflow: hidden;
+}

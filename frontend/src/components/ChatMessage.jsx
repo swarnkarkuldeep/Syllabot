@@ -1,87 +1,136 @@
 import { motion, useReducedMotion } from "motion/react";
 import ReactMarkdown from "react-markdown";
-import { GraduationCapIcon, ThumbsUpIcon, ThumbsDownIcon, BrainIcon } from "@phosphor-icons/react";
+import { ThumbsUpIcon, ThumbsDownIcon } from "@phosphor-icons/react";
+import BrandMark from "./BrandMark";
 import SourcesPanel from "./SourcesPanel";
+import { confidenceTint } from "../lib/sessionStats";
 
-// motion entrance for each message
-const rise = {
-  initial: { opacity: 0, y: 14, scale: 0.995 },
-  animate: { opacity: 1, y: 0, scale: 1 },
+const ease = [0.22, 1, 0.36, 1];
+
+const enter = {
+  user: {
+    initial: { opacity: 0, x: 18, scale: 0.96 },
+    animate: { opacity: 1, x: 0, scale: 1 },
+    transition: { type: "spring", stiffness: 420, damping: 32 },
+  },
+  ta: {
+    initial: { opacity: 0, y: 16 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.5, ease },
+  },
 };
+
+function Avatar() {
+  return (
+    <div className="msg__avatar" aria-hidden>
+      <BrandMark size={15} />
+    </div>
+  );
+}
+
+function FeedbackButton({ on, label, icon: Icon, onClick }) {
+  return (
+    <button
+      type="button"
+      className={`fb${on ? " is-on" : ""}`}
+      onClick={onClick}
+      aria-pressed={on}
+      title={label}
+    >
+      <motion.span
+        className="fb__icon"
+        key={on ? "on" : "off"}
+        initial={on ? { scale: 0.4, rotate: -18 } : false}
+        animate={{ scale: 1, rotate: 0 }}
+        transition={{ type: "spring", stiffness: 600, damping: 14 }}
+      >
+        <Icon size={14} weight={on ? "fill" : "regular"} />
+      </motion.span>
+      {label}
+    </button>
+  );
+}
 
 export default function ChatMessage({ message, onFeedback }) {
   const isUser = message.role === "user";
   const reduce = useReducedMotion();
+  const m = enter[isUser ? "user" : "ta"];
+  const motionProps = reduce ? {} : m;
+
+  if (isUser) {
+    return (
+      <motion.div className="msg msg--user" {...motionProps} style={{ originX: 1, originY: 1 }}>
+        <div className="msg__bubble">{message.content}</div>
+        {message.createdAt && <span className="msg__time">{message.createdAt}</span>}
+      </motion.div>
+    );
+  }
+
+  const hasLatency = typeof message.latency_ms === "number";
 
   return (
-    <motion.div
-      className={`msg msg--${isUser ? "user" : "ta"}`}
-      initial={reduce ? false : rise.initial}
-      animate={rise.animate}
-      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-    >
-      {isUser ? (
-        <div className="msg__bubble">{message.content}</div>
-      ) : (
-        <>
-          <div className="msg__avatar" aria-hidden>
-            <GraduationCapIcon size={17} weight="fill" />
+    <motion.div className="msg msg--ta" {...motionProps}>
+      <Avatar />
+      <article className="msg__card">
+        <div className="msg__body">
+          <ReactMarkdown>{message.content}</ReactMarkdown>
+        </div>
+
+        <SourcesPanel sources={message.sources} />
+
+        <footer className="msg__foot">
+          <div className="msg__meta">
+            {message.confidence && (
+              <span className={`chip chip--${confidenceTint(message.confidence)}`}>
+                {message.confidence}
+              </span>
+            )}
+            {hasLatency && <span>{Math.round(message.latency_ms / 1000)}s</span>}
+            {message.createdAt && <span>{message.createdAt}</span>}
           </div>
-          <article className="msg__card">
-            <div className="msg__body">
-              <ReactMarkdown>{message.content}</ReactMarkdown>
+
+          {message.query_id != null && (
+            <div className="msg__feedback">
+              <FeedbackButton
+                on={message.feedback === "up"}
+                label="Helpful"
+                icon={ThumbsUpIcon}
+                onClick={() => onFeedback(message.query_id, "up", message)}
+              />
+              <FeedbackButton
+                on={message.feedback === "down"}
+                label="Not useful"
+                icon={ThumbsDownIcon}
+                onClick={() => onFeedback(message.query_id, "down", message)}
+              />
             </div>
+          )}
+        </footer>
+      </article>
+    </motion.div>
+  );
+}
 
-            {(message.confidence ||
-              typeof message.latency_ms === "number") && (
-              <div className="msg__meta">
-                {message.confidence && (
-                  <span className={`msg__conf msg__conf--${message.confidence}`}>
-                    {message.confidence}
-                  </span>
-                )}
-                {typeof message.latency_ms === "number" && (
-                  <span className="msg__latency">
-                    <BrainIcon size={11} weight="fill" aria-hidden />{" "}
-                    {Math.round(message.latency_ms / 1000)}s
-                  </span>
-                )}
-              </div>
-            )}
-
-            {message.createdAt && (
-              <div className="msg__created">{message.createdAt}</div>
-            )}
-
-            <SourcesPanel sources={message.sources} />
-
-            {message.query_id != null && (
-              <div className="msg__feedback">
-                <button
-                  type="button"
-                  className={`msg__fb${message.feedback === "up" ? " is-on" : ""}`}
-                  onClick={() => onFeedback(message.query_id, "up", message)}
-                  aria-label="Helpful"
-                  title="Helpful"
-                >
-                  <ThumbsUpIcon size={14} weight={message.feedback === "up" ? "fill" : "regular"} />
-                  Helpful
-                </button>
-                <button
-                  type="button"
-                  className={`msg__fb${message.feedback === "down" ? " is-on" : ""}`}
-                  onClick={() => onFeedback(message.query_id, "down", message)}
-                  aria-label="Not helpful"
-                  title="Not helpful"
-                >
-                  <ThumbsDownIcon size={14} weight={message.feedback === "down" ? "fill" : "regular"} />
-                  Not useful
-                </button>
-              </div>
-            )}
-          </article>
-        </>
-      )}
+/** Placeholder shown while an answer is on its way. */
+export function PendingMessage() {
+  const reduce = useReducedMotion();
+  return (
+    <motion.div
+      className="msg msg--ta msg--pending"
+      initial={reduce ? false : { opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease }}
+      role="status"
+    >
+      <Avatar />
+      <div className="msg__card msg__card--pending">
+        <span className="dots" aria-hidden>
+          <span />
+          <span />
+          <span />
+        </span>
+        <span className="shimmer">Reading your files…</span>
+      </div>
     </motion.div>
   );
 }
