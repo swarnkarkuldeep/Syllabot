@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import ChatMessage from "./components/ChatMessage";
+import ChatMessage, { PendingMessage } from "./components/ChatMessage";
 import ChatInput from "./components/ChatInput";
 import Greeting from "./components/Greeting";
 import MaterialsGrid from "./components/MaterialsGrid";
@@ -133,9 +133,7 @@ export default function App() {
       ]);
     } catch (err) {
       const detail = err?.response?.data?.detail || err?.message || "Something went wrong.";
-      setError(
-        `Unable to reach the assistant - ${detail}. Make sure the backend is running on :8000.`,
-      );
+      setError(`Couldn't reach Syllabot: ${detail}. Check that the backend is running on port 8000.`);
     } finally {
       setLoading(false);
     }
@@ -184,22 +182,13 @@ export default function App() {
                     <ChatMessage key={i} message={msg} onFeedback={handleFeedback} />
                   ))}
 
-                  {loading && (
-                    <div className="msg msg--ta">
-                      <div className="msg__avatar" aria-hidden>
-                        <span className="thinking" aria-label="Thinking">
-                          <span className="thinking__dot" />
-                          <span className="thinking__dot" />
-                          <span className="thinking__dot" />
-                        </span>
-                      </div>
-                      <div className="msg__card">
-                        <div className="msg__card--pending">Reading your files…</div>
-                      </div>
-                    </div>
-                  )}
+                  {loading && <PendingMessage />}
 
-                  {error && <p className="chat__error">{error}</p>}
+                  {error && (
+                    <p className="chat-error" role="alert">
+                      {error}
+                    </p>
+                  )}
                   <div ref={endRef} />
                 </motion.div>
               )}
