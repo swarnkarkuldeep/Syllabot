@@ -1,13 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  PlusIcon,
-  FileIcon,
-  ChatsCircleIcon,
-  BookOpenTextIcon,
-} from "@phosphor-icons/react";
 import ChatMessage from "./components/ChatMessage";
 import ChatInput from "./components/ChatInput";
 import Greeting from "./components/Greeting";
+import Rail from "./components/Rail";
 import FileUpload from "./components/FileUpload";
 import { deleteSession, sendMessage, submitFeedback } from "./api";
 import "./App.css";
@@ -44,8 +39,9 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [provider, setProvider] = useState(getStoredProvider);
-  const [docsOpen, setDocsOpen] = useState(false);
+  const [view, setView] = useState("chat");
   const endRef = useRef(null);
+  const panelHeadingRef = useRef(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -57,6 +53,14 @@ export default function App() {
       localStorage.setItem(PROVIDER_KEY, val);
     } else {
       localStorage.removeItem(PROVIDER_KEY);
+    }
+  };
+
+  const handleViewChange = (next) => {
+    setView(next);
+    // On wide screens the panel is always visible; move focus to it instead.
+    if (next === "documents" && window.matchMedia("(min-width: 1100px)").matches) {
+      panelHeadingRef.current?.focus();
     }
   };
 
@@ -129,115 +133,61 @@ export default function App() {
   const hasMessages = messages.length > 0;
 
   return (
-    <div className="app">
-      {/* Ambient background blobs */}
-      <div className="app__bg" aria-hidden>
-        <div className="app__blob app__blob--1" />
-        <div className="app__blob app__blob--2" />
-        <div className="app__blob app__blob--3" />
-      </div>
+    <div className={`shell shell--${view}`}>
+      <Rail
+        view={view}
+        onViewChange={handleViewChange}
+        onNewChat={handleNewChat}
+        canReset={hasMessages}
+      />
 
-      {/* ── Floating Navbar ─────────────────────────────────────────────── */}
-      <nav className="navbar">
-        <div className="navbar__brand">
-          <span className="navbar__mark" aria-hidden>
-            <BookOpenTextIcon size={18} weight="fill" />
-          </span>
-          <div>
-            <span className="navbar__name">Syllabot</span>
-            <span className="navbar__suffix">AI Study Companion</span>
-          </div>
-        </div>
+      <section className="center">
+        <main className="chat">
+          <div className="thread">
+            {!hasMessages && <Greeting />}
 
-        <div className="navbar__actions">
-          {hasMessages && (
-            <button
-              type="button"
-              className="btn"
-              onClick={handleNewChat}
-              title="Start a fresh conversation"
-            >
-              <PlusIcon size={14} weight="bold" />
-              New chat
-            </button>
-          )}
-        </div>
-      </nav>
+            {messages.map((msg, i) => (
+              <ChatMessage key={i} message={msg} onFeedback={handleFeedback} />
+            ))}
 
-      {/* ── Workspace ──────────────────────────────────────────────────── */}
-      <div className="workspace">
-        {/* Documents panel */}
-        <aside className={`docs${docsOpen ? " is-open" : ""}`}>
-          <div className="docs__head">
-            <span className="docs__title">
-              <FileIcon size={15} weight="fill" />
-              Documents
-            </span>
-          </div>
-          <div className="docs__body">
-            <FileUpload sessionId={sessionId} />
-          </div>
-          <div className="docs__status">
-            <span className="status-dot status-dot--ok" aria-hidden />
-            <span>Session: {sessionId.slice(0, 12)}...</span>
-          </div>
-        </aside>
-
-        {/* Chat pane */}
-        <section className="chatpane">
-          <main className="chat">
-            <div className="thread">
-              {!hasMessages && <Greeting />}
-
-              {messages.map((msg, i) => (
-                <ChatMessage key={i} message={msg} onFeedback={handleFeedback} />
-              ))}
-
-              {loading && (
-                <div className="msg msg--ta">
-                  <div className="msg__avatar" aria-hidden>
-                    <span className="thinking" aria-label="Thinking">
-                      <span className="thinking__dot" />
-                      <span className="thinking__dot" />
-                      <span className="thinking__dot" />
-                    </span>
-                  </div>
-                  <div className="msg__card">
-                    <div className="msg__card--pending">
-                      Searching your materials...
-                    </div>
-                  </div>
+            {loading && (
+              <div className="msg msg--ta">
+                <div className="msg__avatar" aria-hidden>
+                  <span className="thinking" aria-label="Thinking">
+                    <span className="thinking__dot" />
+                    <span className="thinking__dot" />
+                    <span className="thinking__dot" />
+                  </span>
                 </div>
-              )}
+                <div className="msg__card">
+                  <div className="msg__card--pending">Reading your files…</div>
+                </div>
+              </div>
+            )}
 
-              {error && <p className="chat__error">{error}</p>}
-              <div ref={endRef} />
-            </div>
-          </main>
+            {error && <p className="chat__error">{error}</p>}
+            <div ref={endRef} />
+          </div>
+        </main>
 
-          <footer className="composer-wrap">
-            <ChatInput
-              onSend={handleSend}
-              loading={loading}
-              provider={provider}
-              onProviderChange={handleProviderChange}
-            />
-            <p className="composer__hint">
-              Answers grounded in your course materials
-            </p>
-          </footer>
-        </section>
-      </div>
+        <footer className="composer-wrap">
+          <ChatInput
+            onSend={handleSend}
+            loading={loading}
+            provider={provider}
+            onProviderChange={handleProviderChange}
+          />
+        </footer>
+      </section>
 
-      {/* FAB - mobile documents toggle */}
-      <button
-        type="button"
-        className="fab"
-        onClick={() => setDocsOpen((o) => !o)}
-        aria-label={docsOpen ? "Show chat" : "Show documents"}
-      >
-        {docsOpen ? <ChatsCircleIcon size={22} weight="fill" /> : <FileIcon size={22} weight="fill" />}
-      </button>
+      <aside className="panel" aria-label="Session">
+        <h2 className="panel__title" tabIndex={-1} ref={panelHeadingRef}>
+          Documents
+        </h2>
+        <div className="docs__body">
+          <FileUpload sessionId={sessionId} />
+        </div>
+      </aside>
     </div>
   );
 }
