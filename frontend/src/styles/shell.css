@@ -1,13 +1,16 @@
 /* App shell: one rounded sheet of paper on the mint backdrop, split into
    rail | center | session panel. */
 
+/* Padding (not margin) frames the sheet: a margin here would collapse
+   through #root and make the page scroll. */
+#root { padding: 20px; }
+
 .shell {
   position: relative;
   display: grid;
   grid-template-columns: 76px minmax(0, 1fr) 340px;
   gap: 14px;
-  height: calc(100dvh - 40px);
-  margin: 20px;
+  height: 100%;
   padding: 14px;
   background: var(--shell);
   border-radius: var(--r-shell);

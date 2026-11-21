@@ -8,7 +8,6 @@ import Rail from "./components/Rail";
 import SessionPanel from "./components/SessionPanel";
 import { useSessionFiles } from "./lib/useSessionFiles";
 import { deleteSession, sendMessage, submitFeedback } from "./api";
-import "./App.css";
 
 const SESSION_KEY = "syllabot_session_id";
 const PROVIDER_KEY = "syllabot_provider";

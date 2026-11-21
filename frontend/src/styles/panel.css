@@ -110,7 +110,7 @@
   border-radius: 10px;
   background: repeating-linear-gradient(
     -45deg,
-    var(--sand) 0 4px,
+    var(--ghost, var(--sand)) 0 4px,
     transparent 4px 9px
   );
   opacity: 0.8;
@@ -332,4 +332,12 @@
   line-height: 1.65;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+/* Focus lands here from the rail's Documents button: flash, don't outline. */
+.panel__title:focus { outline: none; animation: title-flash 1.2s var(--ease-out); }
+
+@keyframes title-flash {
+  0%, 30% { background: var(--white); box-shadow: 0 0 0 6px var(--white); }
+  100% { background: transparent; box-shadow: 0 0 0 6px transparent; }
 }
