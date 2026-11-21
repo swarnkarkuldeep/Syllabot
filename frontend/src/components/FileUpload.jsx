@@ -1,72 +1,51 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   FileTextIcon,
   NoteIcon,
   FileDocIcon,
   TableIcon,
-  FileCodeIcon,
   GlobeIcon,
   UploadSimpleIcon,
   XIcon,
-  FolderOpenIcon,
   TrashIcon,
+  CircleNotchIcon,
 } from "@phosphor-icons/react";
-import {
-  listSessionFiles,
-  deleteSession,
-  uploadFile,
-  deleteSessionFile,
-  readSessionFile,
-} from "../api";
+import { deleteSession, uploadFile, deleteSessionFile, readSessionFile } from "../api";
+import { fileKind, formatSize } from "../lib/fileKinds";
 
 const ACCEPT = ".pdf,.txt,.md,.docx,.csv,.json,.html";
 
-const FILE_ICONS = {
-  ".pdf": FileTextIcon,
-  ".txt": NoteIcon,
-  ".md": NoteIcon,
-  ".docx": FileDocIcon,
-  ".csv": TableIcon,
-  ".json": FileCodeIcon,
-  ".html": GlobeIcon,
+const KIND_ICONS = {
+  PDF: FileTextIcon,
+  Word: FileDocIcon,
+  Notes: NoteIcon,
+  Data: TableIcon,
+  "Web page": GlobeIcon,
+  File: FileTextIcon,
 };
 
-function getFileIcon(ext) {
-  return FILE_ICONS[ext] || FileTextIcon;
+export function KindIcon({ ext, size = 16 }) {
+  const Icon = KIND_ICONS[fileKind(ext).label] || FileTextIcon;
+  return <Icon size={size} weight="fill" />;
 }
 
-function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
+const rowMotion = {
+  initial: { opacity: 0, y: 8, scale: 0.98 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, x: 24, transition: { duration: 0.18 } },
+};
 
-/**
- * Document panel - upload, list, view, and manage course files.
- * Shown in the left panel of the split layout.
- */
-export default function FileUpload({ sessionId, onFilesChanged }) {
-  const [files, setFiles] = useState([]);
+/** Upload, list, view and remove the session's course files. */
+export default function FileUpload({ sessionId, files, onRefresh, inputRef }) {
+  const reduce = useReducedMotion();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [dragOver, setDragOver] = useState(false);
   const [viewing, setViewing] = useState(null); // { filename, content, extension }
-  const [viewLoading, setViewLoading] = useState(false);
-  const [viewError, setViewError] = useState(null);
-  const inputRef = useRef(null);
 
-  const refresh = useCallback(async () => {
-    try {
-      const res = await listSessionFiles(sessionId);
-      setFiles(res.files || []);
-    } catch {
-      setFiles([]);
-    }
-  }, [sessionId]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  const fail = (err, fallback) =>
+    setError(err?.response?.data?.detail || err?.message || fallback);
 
   const handleUpload = async (file) => {
     if (!file) return;
@@ -74,230 +53,192 @@ export default function FileUpload({ sessionId, onFilesChanged }) {
     setBusy(true);
     try {
       await uploadFile(sessionId, file);
-      await refresh();
-      onFilesChanged?.();
+      await onRefresh();
     } catch (err) {
-      setError(
-        err?.response?.data?.detail || err?.message || "Upload failed."
-      );
+      fail(err, "Upload failed.");
     } finally {
       setBusy(false);
-      if (inputRef.current) inputRef.current.value = "";
+      if (inputRef?.current) inputRef.current.value = "";
     }
-  };
-
-  const handleFileInput = (e) => {
-    handleUpload(e.target.files?.[0]);
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) handleUpload(file);
+    handleUpload(e.dataTransfer.files?.[0]);
   };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setDragOver(true);
-  };
-
-  const handleDragLeave = () => setDragOver(false);
 
   const handleClear = async () => {
     setError(null);
     setBusy(true);
     try {
       await deleteSession(sessionId);
-      setFiles([]);
       setViewing(null);
-      onFilesChanged?.();
+      await onRefresh();
     } catch (err) {
-      setError(err?.response?.data?.detail || err?.message || "Clear failed.");
+      fail(err, "Couldn't clear the files.");
     } finally {
       setBusy(false);
     }
   };
 
-  const handleDeleteFile = async (e, filename) => {
-    e.stopPropagation();
+  const handleDeleteFile = async (filename) => {
     setError(null);
     setBusy(true);
     try {
       await deleteSessionFile(sessionId, filename);
-      if (viewing?.filename === filename) {
-        setViewing(null);
-      }
-      await refresh();
-      onFilesChanged?.();
+      if (viewing?.filename === filename) setViewing(null);
+      await onRefresh();
     } catch (err) {
-      setError(
-        err?.response?.data?.detail || err?.message || "Delete failed."
-      );
+      fail(err, "Couldn't delete the file.");
     } finally {
       setBusy(false);
     }
   };
 
   const handleViewFile = async (filename) => {
-    setViewError(null);
-    setViewLoading(true);
+    setError(null);
     try {
-      const data = await readSessionFile(sessionId, filename);
-      setViewing(data);
+      setViewing(await readSessionFile(sessionId, filename));
     } catch (err) {
-      setViewError(
-        err?.response?.data?.detail || err?.message || "Could not load file."
-      );
-    } finally {
-      setViewLoading(false);
+      fail(err, "Couldn't open the file.");
     }
   };
 
-  // ── Document viewer ──────────────────────────────────────────────────
-  if (viewing) {
-    const ViewIcon = getFileIcon(viewing.extension);
-    return (
-      <div className="doc-viewer">
-        <div className="doc-viewer__header">
-          <button
-            type="button"
-            className="doc-viewer__back"
-            onClick={() => setViewing(null)}
-          >
-            <XIcon size={14} weight="bold" />
-            Close
-          </button>
-          <span className="doc-viewer__filename">
-            <ViewIcon size={14} weight="fill" aria-hidden /> {viewing.filename}
-          </span>
-        </div>
-        {viewError ? (
-          <div className="doc-viewer__error">{viewError}</div>
-        ) : (
-          <pre className="doc-viewer__content">{viewing.content}</pre>
-        )}
-      </div>
-    );
-  }
+  const openPicker = () => inputRef?.current?.click();
 
-  // ── File list view ───────────────────────────────────────────────────
   return (
-    <>
-      {/* Upload zone */}
+    <div className="docs">
       <div
-        className={`upload-zone${dragOver ? " is-dragover" : ""}${busy ? " is-uploading" : ""}`}
-        onClick={() => inputRef.current?.click()}
+        className={`upload${dragOver ? " is-dragover" : ""}${busy ? " is-busy" : ""}`}
+        onClick={openPicker}
         onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            inputRef.current?.click();
+            openPicker();
           }
         }}
         aria-label="Upload a file"
       >
-        <span className="upload-zone__icon" aria-hidden>
-          <UploadSimpleIcon size={22} weight="bold" />
+        <span className="upload__disc" aria-hidden>
+          {busy ? (
+            <CircleNotchIcon size={18} weight="bold" className="spin" />
+          ) : (
+            <UploadSimpleIcon size={18} weight="bold" />
+          )}
         </span>
-        <p className="upload-zone__text">
-          {busy ? "Indexing file..." : "Drop a file here or click to browse"}
-        </p>
-        <p className="upload-zone__hint">
-          PDF, Word, text, markdown, CSV, JSON, HTML
-        </p>
+        <span className="upload__text">
+          <span className="upload__title">
+            {busy ? "Reading your file…" : dragOver ? "Drop to upload" : "Add a file"}
+          </span>
+          <span className="upload__hint">Drop it here or click to browse</span>
+        </span>
         <input
           ref={inputRef}
           type="file"
           accept={ACCEPT}
-          onChange={handleFileInput}
+          onChange={(e) => handleUpload(e.target.files?.[0])}
           disabled={busy}
+          hidden
           aria-label="Choose a file to upload"
         />
       </div>
 
-      {/* Error */}
       {error && (
-        <p className="chat__error" role="alert" style={{ marginBottom: "0.75rem" }}>
+        <p className="docs__error" role="alert">
           {error}
         </p>
       )}
 
-      {/* File list */}
-      {files.length > 0 ? (
+      {files.length > 0 && (
         <>
-          <ul className="file-list">
-            {files.map((f, i) => {
-              const ItemIcon = getFileIcon(f.extension);
-              return (
-                <li
-                  className="file-item file-item--clickable"
-                  key={f.filename || i}
-                  onClick={() => handleViewFile(f.filename)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      handleViewFile(f.filename);
-                    }
-                  }}
-                >
-                  <span className="file-item__icon" aria-hidden>
-                    <ItemIcon size={16} weight="fill" />
-                  </span>
-                  <div className="file-item__info">
-                    <div className="file-item__name" title={f.filename}>
-                      {f.filename}
-                    </div>
-                    <div className="file-item__meta">
-                      {formatSize(f.size_bytes || 0)}
-                    </div>
-                  </div>
-                  <span className="file-item__status file-item__status--indexed">
-                    Indexed
-                  </span>
-                  <button
-                    type="button"
-                    className="file-item__remove"
-                    onClick={(e) => handleDeleteFile(e, f.filename)}
-                    disabled={busy}
-                    title={`Delete ${f.filename}`}
-                    aria-label={`Delete ${f.filename}`}
+          <motion.ul className="docs__list" layout={!reduce}>
+            <AnimatePresence initial={false}>
+              {files.map((f) => {
+                const kind = fileKind(f.extension);
+                return (
+                  <motion.li
+                    key={f.filename}
+                    className="doc-row"
+                    layout={!reduce}
+                    {...(reduce ? {} : rowMotion)}
+                    transition={{ type: "spring", stiffness: 420, damping: 34 }}
                   >
-                    <TrashIcon size={13} weight="bold" />
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-          <button
-            type="button"
-            className="clear-btn"
-            onClick={handleClear}
-            disabled={busy}
-          >
-            <TrashIcon size={12} weight="bold" aria-hidden />
-            Clear all uploads
+                    <button
+                      type="button"
+                      className="doc-row__open"
+                      onClick={() => handleViewFile(f.filename)}
+                      title={`Open ${f.filename}`}
+                    >
+                      <span className={`doc-row__chip chip--${kind.tint}`} aria-hidden>
+                        <KindIcon ext={f.extension} />
+                      </span>
+                      <span className="doc-row__info">
+                        <span className="doc-row__name">{f.filename}</span>
+                        <span className="doc-row__meta">
+                          {kind.label}, {formatSize(f.size_bytes || 0)}
+                        </span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="doc-row__remove"
+                      onClick={() => handleDeleteFile(f.filename)}
+                      disabled={busy}
+                      title={`Delete ${f.filename}`}
+                      aria-label={`Delete ${f.filename}`}
+                    >
+                      <TrashIcon size={15} />
+                    </button>
+                  </motion.li>
+                );
+              })}
+            </AnimatePresence>
+          </motion.ul>
+          <button type="button" className="docs__clear" onClick={handleClear} disabled={busy}>
+            Remove all files
           </button>
         </>
-      ) : (
-        !busy && (
-          <div className="empty-state">
-            <span className="empty-state__icon" aria-hidden>
-              <FolderOpenIcon size={26} weight="duotone" />
-            </span>
-            <p className="empty-state__title">No documents yet</p>
-            <p className="empty-state__text">
-              Upload lecture notes, slides, or readings to get started.
-            </p>
-          </div>
-        )
       )}
-    </>
+
+      <AnimatePresence>
+        {viewing && (
+          <motion.div
+            className="viewer"
+            role="dialog"
+            aria-label={viewing.filename}
+            initial={reduce ? false : { opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduce ? { opacity: 0 } : { opacity: 0, y: 24 }}
+            transition={{ type: "spring", stiffness: 380, damping: 36 }}
+          >
+            <div className="viewer__head">
+              <span className={`doc-row__chip chip--${fileKind(viewing.extension).tint}`} aria-hidden>
+                <KindIcon ext={viewing.extension} />
+              </span>
+              <span className="viewer__name">{viewing.filename}</span>
+              <button
+                type="button"
+                className="viewer__close"
+                onClick={() => setViewing(null)}
+                aria-label="Close file"
+                autoFocus
+              >
+                <XIcon size={16} weight="bold" />
+              </button>
+            </div>
+            <pre className="viewer__body">{viewing.content}</pre>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

@@ -3,7 +3,8 @@ import ChatMessage from "./components/ChatMessage";
 import ChatInput from "./components/ChatInput";
 import Greeting from "./components/Greeting";
 import Rail from "./components/Rail";
-import FileUpload from "./components/FileUpload";
+import SessionPanel from "./components/SessionPanel";
+import { useSessionFiles } from "./lib/useSessionFiles";
 import { deleteSession, sendMessage, submitFeedback } from "./api";
 import "./App.css";
 
@@ -42,6 +43,8 @@ export default function App() {
   const [view, setView] = useState("chat");
   const endRef = useRef(null);
   const panelHeadingRef = useRef(null);
+  const uploadInputRef = useRef(null);
+  const { files, refresh: refreshFiles } = useSessionFiles(sessionId);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -180,14 +183,14 @@ export default function App() {
         </footer>
       </section>
 
-      <aside className="panel" aria-label="Session">
-        <h2 className="panel__title" tabIndex={-1} ref={panelHeadingRef}>
-          Documents
-        </h2>
-        <div className="docs__body">
-          <FileUpload sessionId={sessionId} />
-        </div>
-      </aside>
+      <SessionPanel
+        sessionId={sessionId}
+        messages={messages}
+        files={files}
+        onRefresh={refreshFiles}
+        uploadInputRef={uploadInputRef}
+        headingRef={panelHeadingRef}
+      />
     </div>
   );
 }
