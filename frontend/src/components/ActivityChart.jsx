@@ -11,7 +11,6 @@ const grow = { type: "spring", stiffness: 260, damping: 26 };
 export default function ActivityChart({ messages }) {
   const reduce = useReducedMotion();
   const { asked, avgSeconds, bars } = sessionStats(messages);
-  const firstIndex = messages.filter((m) => m.role === "user").length - bars.length;
   const empties = SLOTS - bars.length;
 
   return (
@@ -25,12 +24,12 @@ export default function ActivityChart({ messages }) {
         {bars.map((b, i) => {
           const latest = i === bars.length - 1;
           return (
-            <div className="activity__slot" key={firstIndex + i}>
+            <div className="activity__slot" key={b.q}>
               <div className="activity__track">
                 <motion.span
                   className={`bar bar--${b.tint}${latest ? " is-latest" : ""}`}
                   style={{ height: `${b.heightPct}%`, originY: 1 }}
-                  title={`${b.seconds}s reply`}
+                  title={`Question ${b.q}: ${b.seconds}s reply`}
                   initial={reduce ? false : { scaleY: 0 }}
                   animate={{ scaleY: 1 }}
                   transition={reduce ? { duration: 0 } : { ...grow, delay: latest ? 0.05 : 0 }}
@@ -38,7 +37,7 @@ export default function ActivityChart({ messages }) {
                 />
               </div>
               <span className={`activity__label${latest ? " is-latest" : ""}`}>
-                Q{Math.max(1, firstIndex + i + 1)}
+                Q{Math.max(1, b.q)}
               </span>
             </div>
           );

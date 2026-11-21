@@ -11,8 +11,8 @@ test("skips non-numeric latency and maps error confidence to sand", () => {
   expect(s.asked).toBe(3);
   expect(s.avgSeconds).toBe(3);
   expect(s.bars).toEqual([
-    { seconds: 2, tint: "mint", heightPct: 50 },
-    { seconds: 4, tint: "sand", heightPct: 100 },
+    { q: 1, seconds: 2, tint: "mint", heightPct: 50 },
+    { q: 3, seconds: 4, tint: "sand", heightPct: 100 },
   ]);
 });
 
@@ -29,4 +29,15 @@ test("confidenceTint", () => {
   expect(confidenceTint("medium")).toBe("peach");
   expect(confidenceTint("low")).toBe("rose");
   expect(confidenceTint(undefined)).toBe("sand");
+});
+
+test("each bar records which question it answers", () => {
+  // u1 answered, u2 failed (no answer), u3 answered, u4 still pending
+  const s = sessionStats([
+    { role: "user" }, { role: "assistant", latency_ms: 1000 },
+    { role: "user" },
+    { role: "user" }, { role: "assistant", latency_ms: 2000 },
+    { role: "user" },
+  ]);
+  expect(s.bars.map((b) => b.q)).toEqual([1, 3]);
 });

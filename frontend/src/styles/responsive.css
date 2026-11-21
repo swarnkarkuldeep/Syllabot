@@ -58,6 +58,7 @@
   .panel { padding-bottom: 86px; }
 
   .panel { border-radius: 0; background: var(--shell); }
+  .viewer { bottom: 86px; }
   .panel .activity,
   .panel .upload,
   .panel .doc-row { background: var(--sand); }

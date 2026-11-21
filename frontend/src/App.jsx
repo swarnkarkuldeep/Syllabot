@@ -169,7 +169,7 @@ export default function App() {
       <section className="center" aria-label="Chat">
         <div className="center__scroll">
           <div className="center__inner">
-            <AnimatePresence mode="wait" initial={false}>
+            <AnimatePresence mode="wait">
               {!hasMessages ? (
                 <motion.div key="intro" className="intro" {...motionProps}>
                   <Greeting />

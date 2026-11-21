@@ -12,10 +12,16 @@ const round1 = (n) => Math.round(n * 10) / 10;
 export function sessionStats(messages) {
   const asked = messages.filter((m) => m.role === "user").length;
 
-  const timed = messages
-    .filter((m) => m.role === "assistant" && Number.isFinite(m.latency_ms))
-    .slice(-MAX_BARS)
-    .map((m) => ({ seconds: round1(m.latency_ms / 1000), tint: confidenceTint(m.confidence) }));
+  // q = the number of the question (user turn) each answer replies to.
+  let q = 0;
+  const timed = [];
+  for (const m of messages) {
+    if (m.role === "user") q += 1;
+    else if (m.role === "assistant" && Number.isFinite(m.latency_ms)) {
+      timed.push({ q, seconds: round1(m.latency_ms / 1000), tint: confidenceTint(m.confidence) });
+    }
+  }
+  timed.splice(0, Math.max(0, timed.length - MAX_BARS));
 
   if (timed.length === 0) return { asked, avgSeconds: null, bars: [] };
 

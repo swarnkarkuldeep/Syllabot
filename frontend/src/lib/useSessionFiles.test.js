@@ -18,3 +18,18 @@ test("backend down yields empty list, no throw", async () => {
   await waitFor(() => expect(result.current.loaded).toBe(true));
   expect(result.current.files).toEqual([]);
 });
+
+test("a slow response for an old session does not overwrite the new one", async () => {
+  let resolveOld;
+  listSessionFiles.mockImplementation((id) =>
+    id === "old"
+      ? new Promise((r) => (resolveOld = r))
+      : Promise.resolve({ files: [{ filename: "new.md", size_bytes: 1, extension: ".md" }] }),
+  );
+  const { result, rerender } = renderHook(({ id }) => useSessionFiles(id), { initialProps: { id: "old" } });
+  rerender({ id: "new" });
+  await waitFor(() => expect(result.current.files[0]?.filename).toBe("new.md"));
+  resolveOld({ files: [{ filename: "old.pdf", size_bytes: 1, extension: ".pdf" }] });
+  await new Promise((r) => setTimeout(r, 20));
+  expect(result.current.files.map((f) => f.filename)).toEqual(["new.md"]);
+});
