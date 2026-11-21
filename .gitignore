@@ -26,3 +26,6 @@ Thumbs.db
 tmp/
 sample_curriculum/
 uploads/
+
+# Design reference screenshots (local only)
+insp/
